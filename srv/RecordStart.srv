@@ -1,0 +1,11 @@
+string bag_name          # rosbagのファイル名
+string[] topics          # 記録するトピック一覧
+string compression_mode  # 圧縮モード: "none", "file", "message"
+string compression_format # 圧縮フォーマット: "zstd", "cdr", など
+string storage_id        # ストレージID: "sqlite3", "mcap" など
+string uri               # 保存先URI
+uint64 max_bagfile_size  # 最大ファイルサイズ (バイト)
+float64 max_cache_size   # 最大キャッシュサイズ (MB)
+---
+bool success             # 成功したかどうか
+string message           # エラーメッセージや追加情報

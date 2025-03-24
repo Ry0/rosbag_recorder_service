@@ -1,0 +1,4 @@
+---
+bool success             # 成功したかどうか
+string message           # エラーメッセージや追加情報
+string bag_path          # 記録されたrosbagのパス

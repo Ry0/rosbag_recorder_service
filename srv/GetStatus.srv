@@ -1,0 +1,5 @@
+---
+bool is_recording        # 記録中かどうか
+string current_bag_path  # 現在記録中のrosbagのパス
+uint64 recorded_messages # 記録されたメッセージ数
+float64 elapsed_time     # 経過時間（秒）
