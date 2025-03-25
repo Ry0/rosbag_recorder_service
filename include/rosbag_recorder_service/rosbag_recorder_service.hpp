@@ -54,6 +54,8 @@ private:
     double max_cache_size);
 
   bool stop_recording();
+  void start_node();
+  void reset_node();
 
   // サービスサーバー
   rclcpp::Service<srv::RecordStart>::SharedPtr record_start_service_;

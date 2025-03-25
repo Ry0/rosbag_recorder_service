@@ -166,21 +166,14 @@ bool RosbagRecorderService::start_recording(
         record_options.compression_format = compression_format.empty() ? "zstd" : compression_format;
       }
     }
-
-
+    
     // レコーダーの作成
     auto writer = rosbag2_transport::ReaderWriterFactory::make_writer(record_options);
     recorder_ = std::make_shared<rosbag2_transport::Recorder>(
         std::move(writer), storage_options, record_options);
 
-    // Executorの作成と設定
-    exec_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
-    exec_->add_node(recorder_);
-
-    // 別スレッドでスピン
-    spin_thread_ = std::thread([this]() {
-      exec_->spin();
-    });
+    // ノード実行
+    start_node();
 
     // レコード開始
     recorder_->record();
@@ -198,6 +191,13 @@ bool RosbagRecorderService::start_recording(
     return true;
   } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "Failed to start recording: %s", e.what());
+    // ノードの停止
+    reset_node();
+
+    if (is_recording_ && recorder_) {
+      recorder_.reset();
+    }
+    
     return false;
   }
 }
@@ -209,19 +209,8 @@ bool RosbagRecorderService::stop_recording()
   }
 
   try {
-    // レコーディングの停止
-    if (exec_) {
-      exec_->cancel();
-      
-      // スレッドが終了するまで待機
-      if (spin_thread_.joinable()) {
-        spin_thread_.join();
-      }
-      
-      // ノードの削除
-      exec_->remove_node(recorder_);
-      exec_.reset();
-    }
+    // ノードのリセット
+    reset_node();
 
     // レコーダーのリセット
     recorder_.reset();
@@ -238,6 +227,34 @@ bool RosbagRecorderService::stop_recording()
   } catch (const std::exception & e) {
     RCLCPP_ERROR(get_logger(), "Failed to stop recording: %s", e.what());
     return false;
+  }
+}
+
+void RosbagRecorderService::start_node()
+{
+    // Executorの作成と設定
+    exec_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+    exec_->add_node(recorder_);
+
+    // 別スレッドでスピン
+    spin_thread_ = std::thread([this]() {
+      exec_->spin();
+    });
+}
+
+void RosbagRecorderService::reset_node()
+{
+  if (exec_) {
+    exec_->cancel();
+    
+    // スレッドが終了するまで待機
+    if (spin_thread_.joinable()) {
+      spin_thread_.join();
+    }
+    
+    // ノードの削除
+    exec_->remove_node(recorder_);
+    exec_.reset();
   }
 }
 
