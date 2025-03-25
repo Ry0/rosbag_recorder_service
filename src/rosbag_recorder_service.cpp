@@ -136,16 +136,23 @@ bool RosbagRecorderService::start_recording(
   try {
     // レコーディングオプションの設定
     rosbag2_transport::RecordOptions record_options;
-    record_options.all_topics = false;
+
+    if(topics.empty() || topics.size() == 0){
+      record_options.all_topics = true;
+    }
+    else{
+      record_options.all_topics = false;
+      record_options.topics = topics;
+    }
+
     record_options.is_discovery_disabled = false;
-    record_options.topics = topics;
     record_options.rmw_serialization_format = "cdr";
     record_options.topic_polling_interval = std::chrono::milliseconds(100);
 
     // ストレージオプションの設定
     rosbag2_storage::StorageOptions storage_options;
     storage_options.uri = uri.empty() ? bag_name : uri + "/" + bag_name;
-    storage_options.storage_id = storage_id.empty() ? "sqlite3" : storage_id;
+    storage_options.storage_id = storage_id.empty() ? "mcap" : storage_id;
     storage_options.max_bagfile_size = max_bagfile_size;
     storage_options.max_cache_size = static_cast<uint64_t>(max_cache_size * 1024 * 1024);
 
@@ -155,16 +162,21 @@ bool RosbagRecorderService::start_recording(
       record_options.compression_format = compression_format.empty() ? "zstd" : compression_format;
     }
 
-    // レコーダーの作成と開始
+    // レコーダーの作成
     auto writer = rosbag2_transport::ReaderWriterFactory::make_writer(record_options);
-
     recorder_ = std::make_shared<rosbag2_transport::Recorder>(
         std::move(writer), storage_options, record_options);
-    // recorder_ = std::make_shared<rosbag2_transport::Recorder>(
-    //   std::make_unique<rosbag2_cpp::writers::SequentialWriter>(),
-    //   storage_options,
-    //   record_options, "aa", nullptr);
 
+    // Executorの作成と設定
+    exec_ = std::make_unique<rclcpp::executors::SingleThreadedExecutor>();
+    exec_->add_node(recorder_);
+
+    // 別スレッドでスピン
+    spin_thread_ = std::thread([this]() {
+      exec_->spin();
+    });
+
+    // レコード開始
     recorder_->record();
 
     // 状態の更新
@@ -191,7 +203,22 @@ bool RosbagRecorderService::stop_recording()
   }
 
   try {
-    recorder_.reset();  // これによりレコーダーが停止され、リソースが解放される
+    // レコーディングの停止
+    if (exec_) {
+      exec_->cancel();
+      
+      // スレッドが終了するまで待機
+      if (spin_thread_.joinable()) {
+        spin_thread_.join();
+      }
+      
+      // ノードの削除
+      exec_->remove_node(recorder_);
+      exec_.reset();
+    }
+
+    // レコーダーのリセット
+    recorder_.reset();
     is_recording_ = false;
     
     auto now = std::chrono::steady_clock::now();

@@ -60,6 +60,10 @@ private:
   rclcpp::Service<srv::RecordStop>::SharedPtr record_stop_service_;
   rclcpp::Service<srv::GetStatus>::SharedPtr get_status_service_;
 
+  // Executorとスピンスレッド関連
+  std::unique_ptr<rclcpp::executors::SingleThreadedExecutor> exec_;
+  std::thread spin_thread_;
+  
   // レコーダー関連
   std::shared_ptr<rosbag2_transport::Recorder> recorder_;
   bool is_recording_;
