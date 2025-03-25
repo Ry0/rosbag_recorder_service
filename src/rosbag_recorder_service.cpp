@@ -157,10 +157,16 @@ bool RosbagRecorderService::start_recording(
     storage_options.max_cache_size = static_cast<uint64_t>(max_cache_size * 1024 * 1024);
 
     // 圧縮オプションの設定
-    if (!compression_mode.empty()) {
-      record_options.compression_mode = compression_mode;
-      record_options.compression_format = compression_format.empty() ? "zstd" : compression_format;
+    if (compression_mode.empty()) {
+      record_options.compression_mode = "none";
     }
+    else{
+      record_options.compression_mode = compression_mode;
+      if (compression_mode != "none"){
+        record_options.compression_format = compression_format.empty() ? "zstd" : compression_format;
+      }
+    }
+
 
     // レコーダーの作成
     auto writer = rosbag2_transport::ReaderWriterFactory::make_writer(record_options);
