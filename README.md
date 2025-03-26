@@ -53,8 +53,8 @@ ros2 service call /rosbag_recorder_service/record_start rosbag_recorder_service/
   compression_mode: 'file', 
   compression_format: 'zstd', 
   storage_id: 'mcap', 
-  uri: '.', 
-  max_bagfile_size: 0, 
+  uri: './hoge', 
+  max_bagfile_size: 1000.0, 
   max_cache_size: 100.0
 }"
 ```
@@ -62,12 +62,7 @@ ros2 service call /rosbag_recorder_service/record_start rosbag_recorder_service/
 simple
 
 ```bash
-ros2 service call /rosbag_recorder_service/record_start rosbag_recorder_service/srv/RecordStart "{
-  bag_name: 'my_recording', 
-  uri: '.', 
-  max_bagfile_size: 0, 
-  max_cache_size: 100.0
-}"
+ros2 service call /rosbag_recorder_service/record_start rosbag_recorder_service/srv/RecordStart "{}"
 ```
 
 #### Stop Recording
@@ -92,7 +87,7 @@ ros2 service call /rosbag_recorder_service/get_status rosbag_recorder_service/sr
 - `compression_format`: Compression format ('zstd', 'cdr', etc.)
 - `storage_id`: Storage format ('sqlite3', 'mcap')
 - `uri`: Path to save the bag file
-- `max_bagfile_size`: Maximum file size (bytes)
+- `max_bagfile_size`: Maximum file size (MB)
 - `max_cache_size`: Maximum cache size (MB)
 
 ### RecordStop Service
