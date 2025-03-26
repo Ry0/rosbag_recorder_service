@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <utility>
+#include <filesystem>
 
 #include "rosbag2_cpp/writer.hpp"
 #include "rosbag2_storage/storage_options.hpp"
@@ -130,7 +131,7 @@ bool RosbagRecorderService::start_recording(
   const std::string & compression_format,
   const std::string & storage_id,
   const std::string & uri,
-  uint64_t max_bagfile_size,
+  double max_bagfile_size,
   double max_cache_size)
 {
   try {
@@ -138,6 +139,8 @@ bool RosbagRecorderService::start_recording(
     rosbag2_transport::RecordOptions record_options;
 
     if(topics.empty() || topics.size() == 0){
+      RCLCPP_WARN(
+        get_logger(), "topics is empty. Record all topics.");
       record_options.all_topics = true;
     }
     else{
@@ -151,13 +154,46 @@ bool RosbagRecorderService::start_recording(
 
     // ストレージオプションの設定
     rosbag2_storage::StorageOptions storage_options;
-    storage_options.uri = uri.empty() ? bag_name : uri + "/" + bag_name;
+    
+    std::string bag_file_name;
+    if (bag_name.empty()){
+      // 現在の時刻を取得
+      auto now = std::chrono::system_clock::now();
+      std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    
+      // 時刻をフォーマットする
+      std::tm tm_struct;
+      localtime_r(&now_time, &tm_struct);
+
+      std::ostringstream oss;
+      oss << "rosbag2_"
+          << std::put_time(&tm_struct, "%Y_%m_%d-%H_%M_%S");
+      bag_file_name = oss.str();
+      RCLCPP_WARN(
+        get_logger(), "bag_name is empty. bag_name is automatically generated. %s", bag_file_name.c_str());
+    }
+    else{
+      bag_file_name = bag_name;
+    }
+
+    if (uri.empty()){
+      RCLCPP_WARN(
+        get_logger(), "uri is empty. the bag file will be saved in current directory. %s", bag_file_name.c_str());
+      storage_options.uri = bag_file_name;
+    }
+    else{
+      auto file_path = std::filesystem::path(uri) / std::filesystem::path(bag_file_name);
+      storage_options.uri = file_path.string(); 
+    }
+
     storage_options.storage_id = storage_id.empty() ? "mcap" : storage_id;
-    storage_options.max_bagfile_size = max_bagfile_size;
-    storage_options.max_cache_size = static_cast<uint64_t>(max_cache_size * 1024 * 1024);
+    storage_options.max_bagfile_size = static_cast<uint64_t>(max_bagfile_size * 1024 * 1024);;
+    storage_options.max_cache_size = static_cast<uint64_t>(max_cache_size * 1024 * 1024);;
 
     // 圧縮オプションの設定
     if (compression_mode.empty()) {
+      RCLCPP_WARN(
+        get_logger(), "compression_mode is empty. compression_mode is set as none.");
       record_options.compression_mode = "none";
     }
     else{
@@ -184,9 +220,16 @@ bool RosbagRecorderService::start_recording(
     recorded_messages_ = 0;
     start_time_ = std::chrono::steady_clock::now();
 
-    RCLCPP_INFO(
-      get_logger(), "Started recording to %s with topics: %zu",
-      current_bag_path_.c_str(), topics.size());
+    if (record_options.all_topics){
+      RCLCPP_INFO(
+        get_logger(), "Started recording to %s with all topics",
+        current_bag_path_.c_str());
+    }
+    else{
+      RCLCPP_INFO(
+        get_logger(), "Started recording to %s with topics: %zu",
+        current_bag_path_.c_str(), topics.size());
+    }
 
     return true;
   } catch (const std::exception & e) {

@@ -50,7 +50,7 @@ private:
     const std::string & compression_format,
     const std::string & storage_id,
     const std::string & uri,
-    uint64_t max_bagfile_size,
+    double max_bagfile_size,
     double max_cache_size);
 
   bool stop_recording();
