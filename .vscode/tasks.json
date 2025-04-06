@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "colcon: build (debug)",
+      "type": "shell",
+      "command": [
+        "cd ../../;",
+        "source /opt/ros/jazzy/setup.bash;",
+        "source install/setup.bash;",
+        "colcon build",
+        // "--symlink-install;",
+        "--packages-select $(basename \"${workspaceFolder}\");",
+      ],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "colcon: clean",
+      "type": "shell",
+      "command": [
+        "cd ../../;",
+        "rm -rf build/ install/ log/;"
+      ]
+    },
+    {
+      "label": "colcon: test",
+      "command": [
+        "cd ../../;",
+        "source /opt/ros/jazzy/setup.bash;",
+        "source install/setup.bash;",
+        "colcon test",
+        "--packages-select $(basename \"${workspaceFolder}\");",
+        "--event-handlers console_direct+;"
+      ]
+    }
+  ]
+}
