@@ -186,6 +186,19 @@ bool RosbagRecorderService::start_recording(
       storage_options.uri = file_path.string(); 
     }
 
+    if (std::filesystem::exists(storage_options.uri) && std::filesystem::is_directory(storage_options.uri)) {
+        try {
+            std::uintmax_t count = std::filesystem::remove_all(storage_options.uri);
+            RCLCPP_INFO(get_logger(),
+                        "Directory '%s' and its %ju contents deleted.",
+                        storage_options.uri.c_str(), count);
+        } catch (const std::filesystem::filesystem_error& e) {
+            RCLCPP_ERROR(get_logger(),
+                         "Failed to delete directory '%s': %s",
+                         storage_options.uri.c_str(), e.what());
+        }
+    } 
+
     storage_options.storage_id = storage_id.empty() ? "mcap" : storage_id;
     storage_options.max_bagfile_size = static_cast<uint64_t>(max_bagfile_size * 1024 * 1024);;
     storage_options.max_cache_size = static_cast<uint64_t>(max_cache_size * 1024 * 1024);;
